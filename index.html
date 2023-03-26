@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"
+      integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk"
+      crossorigin="anonymous"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito&display=swap"
+      rel="stylesheet"
+    />
+    <title>Word Count Tool</title>
+  </head>
+  <body>
+    <h1>Word Count Tool</h1>
+    <form id="wordCountForm">
+      <label for="urlInput">Enter a domain/website URL:</label>
+      <input type="text" id="urlInput" name="url" required />
+      <button type="submit">Count Words</button>
+    </form>
+    <div id="result"></div>
+    <div id="tableDiv" class="d-none">
+      <table class="table">
+        <thead>
+          <tr>
+            <th>URL</th>
+            <th>Word Count</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+
+    <script>
+      const form = document.querySelector("#wordCountForm");
+      const resultDiv = document.querySelector("#result");
+      const tableDiv = document.querySelector("#tableDiv");
+      const tableBody = document.querySelector("#tableBody");
+      const history = [];
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const url = form.elements.url.value;
+
+        try {
+          const response = await fetch("/wordcount", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ url }),
+          });
+          const data = await response.json();
+
+          // If this is the first result, show the table
+          if (tableDiv.classList.contains("d-none")) {
+            tableDiv.classList.remove("d-none");
+          }
+
+          // Add the word count result to the table
+          const row = document.createElement("tr");
+          const urlCell = document.createElement("td");
+          const wordCountCell = document.createElement("td");
+          urlCell.textContent = data.url;
+          wordCountCell.textContent = data.wordCount;
+          row.appendChild(urlCell);
+          row.appendChild(wordCountCell);
+          tableBody.appendChild(row);
+
+          // Display the word count result in the resultDiv
+          resultDiv.innerHTML = `<p>Word count for ${data.url}: ${data.wordCount}</p>`;
+
+          // Add the result to the history
+          history.push({ url: data.url, wordCount: data.wordCount });
+        } catch (error) {
+          console.log(error);
+          resultDiv.innerHTML = "<p>Unable to fetch word count data</p>";
+        }
+      });
+
+      // Add previous search results to the table
+      if (localStorage.getItem("history")) {
+        const storedHistory = JSON.parse(localStorage.getItem("history"));
+        history.push(...storedHistory);
+        storedHistory.forEach((result) => {
+          const row = document.createElement("tr");
+          const urlCell = document.createElement("td");
+          const wordCountCell = document.createElement("td");
+          urlCell.textContent = result.url;
+          wordCountCell.textContent = result.wordCount;
+          row.appendChild(urlCell);
+          row.appendChild(wordCountCell);
+          tableBody.appendChild(row);
+        });
+      }
+
+      // Save search history to localStorage when the page is unloaded
+      window.addEventListener("beforeunload", () => {
+        localStorage.setItem("history", JSON.stringify(history));
+      });
+    </script>
+  </body>
+</html>
